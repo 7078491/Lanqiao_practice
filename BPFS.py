@@ -45,7 +45,6 @@ def frog_bfs(start, target):
                     q.append((ns, d + 1))
     return -1   # 不可达（本题一般有解）
 print(frog_bfs(s1, s2))
-# 通过
 
 # BFS:AB对换,卡片换位
 # 对于二维的 拼成一维处理
@@ -60,13 +59,14 @@ def ab_bfs(start):
     cols = 3
     a = start.index('A')
     b = start.index('B')
+    dirs = ((-1,0), (1,0), (0,-1), (0,1))
     while q:
         s, d = q.popleft()
         e = s.index(' ')
         er, ec = divmod(e, cols) 
-        # 输入a,b,返回a对b的商和余数元组
+        # 输入a,b,返回a对b的商和余数元组.这里用来取空位的行列号
         # 一维变高维,获得空位序列号
-        for dr, dc in ((-1,0), (1,0), (0,-1), (0,1)):
+        for dr, dc in dirs:
             nr, nc = er+dr, ec+dc
             if not (0 <= nr < rows and 0 <= nc < cols):
                 continue # 越界
@@ -84,7 +84,39 @@ def ab_bfs(start):
                 q.append((ns, d+1))
     return -1
 print(ab_bfs(s0))
-# 通过
+
+# BFS: 九宫重排
+start = input().rstrip('\n')
+target = input().rstrip('\n')
+from collections import deque
+def magsqu_bfs(start, target):
+    # 一维转二维
+    if start == target:
+        return 0
+    r = c = 3
+    # start = list(start) 转二维表: [list(s[i*c:(i+1)*c]) for i in range(r)]
+    visited = {start}
+    q = deque([(start, 0)])
+    dirs = ((-1,0), (1,0), (0,-1), (0,1))
+    while q:
+        s, d = q.popleft()
+        e = s.index('.')
+        er, ec = divmod(e, c)
+        # 调用divmod取行列号
+        for dr, dc in dirs:
+            nr, nc = er+dr, ec+dc
+            if 0 <= nr < r and 0 <= nc < c:
+                p = nr * c + nc
+                lst = list(s)
+                lst[e], lst[p] = lst[p], lst[e]
+                ns = ''.join(lst)
+                if ns == target:
+                    return d+1
+                if ns not in visited:
+                    visited.add(ns)
+                    q.append((ns, d+1))
+    return -1
+print(magsqu_bfs(start, target))
 
 # BFS:长草
 n, m = map(int, input().split())
@@ -117,7 +149,7 @@ def grass_bfs(land, k, m, n):
     return ''.join(grid)
 land = grass_bfs(land, k, m, n)
 for i in range(n):
-    print(land[m*i:(i+1)*m])
+    print(land[i*m:(i+1)*m])
 
 # BFS: 迷宫陷阱
 n, K = map(int, input().split())
@@ -184,7 +216,6 @@ print(maze_bfs())
 n, m = map(int, input().split())
 maze = [list(map(int, input().split())) for _ in range(n)]
 # 迷宫数阵
-from collections import deque
 def simbaze_bfs(maze):
     sx, sy, ex, ey = map(int, input().split())
     dist = [[-1 for _ in range(m)] for _ in range(n)]
@@ -198,6 +229,7 @@ def simbaze_bfs(maze):
     q.append((sx, sy, 0))
     # sx, sy表示当前位置, 后面的0是当前步数
     while q:
+        # ps: 这里不需要专门检查起终点.
         x, y, d = q.popleft()
         if x == ex and y == ey:
             # 已抵达终点.
@@ -225,7 +257,6 @@ print(ans)
         
 # 最少操作数BFS
 n, k = map(int, input().split())
-from collections import deque
 def cooperate_bfs(n, k):
     q = deque()
     q.append((n, 0))
@@ -241,29 +272,6 @@ def cooperate_bfs(n, k):
                 visited.add(nums[i])
     return -1
 print(cooperate_bfs(n, k))
-        
-n,m=map(int,input().split())
-arr=[list(map(int,input().split())) for _ in range(n)]
-x1,y1,x2,y2=map(int,input().split())
-distance=[(1,0),(0,-1),(0,1),(-1,0)]
-q=[]#用队列实现
-q.append([x1-1,y1-1,0])#先存起点和当前步数0
-while q:
-    #print(q)
-    now=q.pop(0)
-    r,c,s=now[0],now[1],now[2]#当前点的坐标和步数
-    arr[r][c]=0#标记
-    if r==x2-1 and c==y2-1:#到达终点
-        print(s)#打印当前步数，即答案
-        break
-    for k in range(4):#向4个方向找可行路径
-        dx,dy=distance[k]
-        x,y=dx+r,dy+c
-        if 0<=x<n and 0<=y<m and arr[x][y]==1:#不越界且可走
-            arr[x][y]=0#标记该点
-            q.append([x,y,s+1])
-else:
-    print(-1)
         
     
 # 类bfs:扫雷
@@ -286,7 +294,7 @@ for row in dist:
     print(' '.join(map(str, row)))
 
 # 染色Dijkstra问题
-# 带边权时BFS失效
+# 带边权时BFS失效,本题值得研究
 import heapq
 n, m = map(int, input().split())
 ts = [list(map(int, input().split())) for _ in range(n)]
@@ -307,6 +315,46 @@ while pq:
                 finish[nr][nc] = nt
                 heapq.heappush(pq, (nt, nr, nc))
 print(max(finish[r][c] for r in range(n) for c in range(m)))
+
+# 01BFS: 两栖作战
+from collections import deque
+n = int(input())
+land = [input().strip() for _ in range(n)] 
+# 0地1水
+def amphibious_bfs():
+    INF = float('inf')
+    # 预设为无穷大，未确定最少切换次数
+    dist = [[INF] * n for _ in range(n)]
+    dist[0][0] = 0
+    # dist[r][c] 表示从(0, 0)到(r, c)最少切换次数
+    # 起点初始化,代价0
+    dq = deque([(0, 0)])
+    # 双端队列初始化,只放坐标(r, c)
+    dirs = ((-1,0),(1,0),(0,-1),(0,1))
+    while dq:
+        r, c = dq.popleft()
+        d = dist[r][c]
+        # 当前格最少切换次数
+        for dr, dc in dirs:
+            nr, nc = r + dr, c + dc
+            if 0 <= nr < n and 0 <= nc < n:
+                # 不越界, 计算边权(同0异1)
+                w = 0 if land[r][c] == land[nr][nc] else 1
+                nd = d + w
+                # 边权+当前代价
+                if nd < dist[nr][nc]:
+                    # 当前切换更少,更新(可执行多次)
+                    dist[nr][nc] = nd
+                    if w == 0:
+                        dq.appendleft((nr, nc))   
+                        # 代价 0，去队头
+                    else:
+                        dq.append((nr, nc))       
+                        # 代价 1，去队尾
+                    # 上面相当于优先做代价0的.
+    return dist[n-1][n-1]
+print(amphibious_bfs())
+# 内存限制，只过7成(Python3),PyPy3可以全过
 
 # 串门: BFS两次求树直径
 def main():
