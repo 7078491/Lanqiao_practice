@@ -85,6 +85,53 @@ def ab_bfs(start):
     return -1
 print(ab_bfs(s0))
 
+# 胖子走迷宫
+from collections import deque
+
+n,k = map(int,input().split())
+s = [list(input()) for i in range(n)]
+q = deque([(2,2,2,0)])
+# 用数字012标记胖瘦状态的半径长，最右侧数值标记当前时刻
+vir = [[0 for _ in range(n)] for _ in range(n)]
+# 标记访问过的位置(x, y)
+vir[2][2] = 1
+dirs = ((-1,0), (1,0), (0,-1), (0,1))
+def f(t):  
+    # 检验时间返回状态
+    if t < k:
+        return 2
+    if t < 2 * k:
+        return 1
+    else:
+        return 0
+def check(x,y,r): 
+    # 检查区域内是否有障碍
+    for i in range(x-r,x+r+1):
+        for j in range(y-r,y+r+1):
+            if s[i][j] == '*':
+                # 有墙
+                return False
+    return True
+def weigh_bfs():
+    while q:
+        x,y,r,t = q.popleft()
+        if x == n-3 and y == n-3:
+            # 目标终点索引n-3
+            return t
+        if r != 0:
+            # 原地等待,体型变瘦,剪枝
+            q.append((x,y,f(t + 1),t+1))
+        for dx, dy in dirs:
+            nx = x + dx
+            ny = y + dy
+            if r <= nx and nx < n - r and r <= ny and ny < n - r and vir[nx][ny] == 0:
+                # 完全不越界且未访问
+                if check(nx,ny,r) == True:
+                    # 无障碍
+                    q.append((nx,ny,f(t+1),t+1))
+                    vir[nx][ny] = 1
+print(weigh_bfs())
+
 # BFS: 九宫重排
 start = input().rstrip('\n')
 target = input().rstrip('\n')
@@ -273,7 +320,6 @@ def cooperate_bfs(n, k):
     return -1
 print(cooperate_bfs(n, k))
         
-    
 # 类bfs:扫雷
 n, m = map(int, input().split())
 old = [list(map(int, input().split())) for _ in range(n)]
