@@ -107,6 +107,7 @@ def f(t):
 def check(x,y,r): 
     # 检查区域内是否有障碍
     for i in range(x-r,x+r+1):
+        # 横向扫,侧向扫
         for j in range(y-r,y+r+1):
             if s[i][j] == '*':
                 # 有墙
@@ -131,6 +132,53 @@ def weigh_bfs():
                     q.append((nx,ny,f(t+1),t+1))
                     vir[nx][ny] = 1
 print(weigh_bfs())
+
+# BFS: 传送门期望
+n, m = map(int, input().split())
+portal = {}
+for _ in range(m):
+    x1, y1, x2, y2 = map(int, input().split())
+    portal.setdefault((x1, y1), []).append((x2, y2))
+    portal.setdefault((x2, y2), []).append((x1, y1))
+    # 传送门邻接表：key = (x, y)，value = [(x2,y2), ...]
+from collections import deque
+def transfer_maze_bfs():
+    total = n * n
+    # 期望均值: E = 所有最短步数和 / n^2
+    dist = [-1] * total
+    # n^2压成一维处理.终点作为起点得到一维索引
+    start = (n-1) * n + (n-1)
+    dist[start] = 0
+    # 反向考虑以终点作为起点算
+    dirs = ((-1,0), (1,0), (0,-1), (0,1))
+    q = deque([(n, n)])
+    while q:
+        x, y = q.popleft()
+        d = dist[(x - 1) * n + (y - 1)]
+        for dx, dy in dirs:
+            nx, ny = x + dx, y + dy
+            if 1 <= nx <= n and 1 <= ny <= n:
+                # 不按索引,按实际序号
+                p = (nx - 1) * n + (ny - 1)
+                if dist[p] == -1:
+                    # 未访问,更新！
+                    dist[p] = d + 1
+                    q.append((nx, ny))
+        #  传送门,另外尝试
+        nbrs = portal.get((x, y))    
+        if nbrs:
+            for nx, ny in nbrs:
+                p = (nx - 1) * n + (ny - 1)
+                if dist[p] == -1:
+                    dist[p] = d + 1
+                    q.append((nx, ny))
+    all_sum = sum(dist)
+    E = all_sum / total
+    return E
+    
+E = transfer_maze_bfs()
+print(f"{E:.2f}")
+
 
 # BFS: 九宫重排
 start = input().rstrip('\n')
@@ -412,12 +460,13 @@ def main():
     total = 0
     idx = 1
     for _ in range(n - 1):
-        v = int(data[idx]); u = int(data[idx+1]); w = int(data[idx+2])
+        v = int(data[idx])
+        u = int(data[idx+1])
+        w = int(data[idx+2])
         idx += 3
         adj[v].append((u, w))
         adj[u].append((v, w))
         total += w
-
     def bfs(start):
         dist = [-1] * (n + 1)
         dist[start] = 0
@@ -433,8 +482,126 @@ def main():
                         far_dist = dist[y]
                         far_node = y
         return far_node, far_dist
-
     u, _ = bfs(1)          # 第一次 BFS：找最远点 u
     _, diameter = bfs(u)   # 第二次 BFS：从 u 找最远距离 = 直径
-
     print(2 * total - diameter)
+
+# ==========================================================================
+# ================================= DFS ====================================
+# ==========================================================================
+# DFS: 海岛淹没问题
+def islands_sink():
+    input = sys.stdin.readline
+    n = int(input())
+    grid = [list(input().strip()) for _ in range(n)]
+    # 速读边长为n的正方形字符网格, '#' 标记陆地连通块
+    visited = [[False] * n for _ in range(n)]
+    # visited标记对应点是否已被某岛DFS访问
+    dirs = ((-1, 0), (1, 0), (0, -1), (0, 1))
+    ans = 0
+    for i in range(n):
+        for j in range(n):
+            # 双循环扫描
+            if grid[i][j] == '#' and not visited[i][j]:
+                # 未访问到的陆地且不在某一连通块中
+                has_core = False          
+                # 岛屿是否有不会被淹的格子
+                stack = [(i, j)]
+                visited[i][j] = True
+                while stack:
+                    # 显式栈迭代，LIFO
+                    # DFS遍历全岛
+                    x, y = stack.pop()
+                    # 检查是否四邻全陆地
+                    if (0 < x < n-1 and 0 < y < n-1
+                            and grid[x-1][y] == '#' and grid[x+1][y] == '#'
+                            and grid[x][y-1] == '#' and grid[x][y+1] == '#'):
+                        has_core = True
+                    for dx, dy in dirs:
+                        nx, ny = x + dx, y + dy
+                        if 0 <= nx < n and 0 <= ny < n:
+                            if grid[nx][ny] == '#' and not visited[nx][ny]:
+                                visited[nx][ny] = True
+                                stack.append((nx, ny))
+                                # 连通块更新
+                if not has_core:          
+                    # 没有核心 → 完全淹没
+                    ans += 1
+    print(ans)
+
+# DFS: 数字排队问题
+def main():
+    data = sys.stdin.buffer.read().split()
+    n = int(data[0])
+    a = list(map(int, data[1:1+n]))
+    # 建邻接矩阵：i,j 不能同队（有倍数关系，含相等）
+    conflict = [[False]*n for _ in range(n)]
+    for i in range(n):
+        for j in range(n):
+            if i == j:
+                continue
+            # 相等 或 整除关系
+            if a[i] == a[j] or a[i] % a[j] == 0 or a[j] % a[i] == 0:
+                conflict[i][j] = True
+    # 最小着色：DFS 回溯，color[i] = 第几队
+    color = [-1] * n
+    best = [n]   # 上界：每人一队
+    def dfs(idx, used):
+        if used >= best[0]:        # 剪枝
+            return
+        if idx == n:
+            best[0] = used
+            return
+        # 尝试放入已有队 0..used-1
+        for c in range(used):
+            ok = True
+            for j in range(idx):
+                if color[j] == c and conflict[idx][j]:
+                    ok = False
+                    break
+            if ok:
+                color[idx] = c
+                dfs(idx+1, used)
+                color[idx] = -1
+        # 开新队
+        color[idx] = used
+        dfs(idx+1, used+1)
+        color[idx] = -1
+
+    dfs(0, 0)
+    print(best[0])
+
+if __name__ == "__main__":
+    main()
+     
+# DFS: 绕圈挑战 
+n = int(input())
+Energ = list(map(int, input().split()))
+def Energ_dfs():
+    states = [0 for _ in range(n)]
+    # 对于第i名, 先向右打到第n个
+    # 然后继续从1开始打到i-1
+    maxe = max(Energ)
+    # 先算一个最大值，大于最大直接跳出循环实现剪枝
+    for i in range(n):
+        e = Energ[i]
+        ok = True
+        for step in range(1, n):
+            j = (i + step) % n
+            # 右手边第step个
+            if e > maxe:
+                states[i] = 1
+                break
+            if e > Energ[j]:
+                e = 2 * e 
+            else:
+                states[i] = 0
+                ok = False
+                break
+        if ok:
+            states[i] = 1
+    return states
+states = Energ_dfs()
+for i in range(n):
+    print(states[i])
+
