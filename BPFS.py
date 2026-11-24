@@ -450,6 +450,26 @@ def amphibious_bfs():
 print(amphibious_bfs())
 # 内存限制，只过7成(Python3),PyPy3可以全过
 
+# BFS: 土豪劫匪问题
+A, B, C = map(int, input().split())
+# V = A*B*C
+# A 个 BxC矩阵
+def gcd(a, b):
+    # 更相减损函数求最大公约数
+    while b:
+        a, b = b, a % b
+    return a
+def get_lcm(nums):
+    if not nums:
+        return 0
+        
+    res = 1
+    for num in nums:
+        # LCM(a,b) = a * b // GCD(a,b)
+        res = res * num // gcd(res, num)
+    return res
+Volum = [A, B, C]
+
 # 串门: BFS两次求树直径
 def main():
     data = sys.stdin.read().split()
@@ -605,3 +625,111 @@ states = Energ_dfs()
 for i in range(n):
     print(states[i])
 
+# DFS: AnotherEightPuzzle
+t = int(input())
+cases = []
+for _ in range(t):
+    case = list(map(int, input().split()))
+    cases.append(case)
+
+def check(cases):
+    ok = False
+    multi = True
+    # 标记通过或多解情况
+    for i in range(t):
+        case = cases[i]
+        
+    
+        if not ok:
+            print(f"Case {i}: No answer")
+        if multi:
+            print(f"Case {i}: Not unique")
+
+
+
+def solve_case(init):
+    adj = [
+        [1, 2, 3],             # A=0
+        [0, 2, 4, 5],          # B=1
+        [0, 1, 3, 4, 5, 6],    # C=2
+        [0, 2, 5, 6],          # D=3
+        [1, 2, 5, 7],          # E=4
+        [1, 2, 3, 4, 6, 7],    # F=5
+        [2, 3, 5, 7],          # G=6
+        [4, 5, 6]              # H=7
+    ]
+
+    pos = [0] * 8          # 每格填的数
+    used = [False] * 9     # 数字 1..8 是否已用
+    solutions = []         # 收集解（最多收 2 个就够判断）
+
+    # 预填已固定的格子
+    for i in range(8):
+        if init[i] != 0:
+            # 填充数字,标记数字已使用
+            pos[i] = init[i]
+            used[init[i]] = True
+
+    # 检查预填是否有冲突
+    for i in range(8):
+        if init[i] == 0:
+            continue
+        for nb in adj[i]:
+            if init[nb] != 0 and abs(init[i] - init[nb]) == 1:
+                return "No answer"      # 预填已矛盾
+    # 待填格子列表
+    empty = [i for i in range(8) if init[i] == 0]
+    def dfs(k):
+        if len(solutions) >= 2:
+            return                       # 已找到 2 个解，剪枝
+        if k == len(empty):
+            solutions.append(pos[:])     # 找到一个解
+            return
+        idx = empty[k]
+        
+        # 尝试所有未用数字
+        for v in range(1, 9):
+            if used[v]:
+                continue
+            # 检查与已填邻居是否连续
+            ok = True
+            for nb in adj[idx]:
+                if pos[nb] != 0 and abs(v - pos[nb]) == 1:
+                    ok = False
+                    break
+            if not ok:
+                continue
+            pos[idx] = v
+            used[v] = True
+            dfs(k + 1)
+            pos[idx] = 0
+            used[v] = False
+            if len(solutions) >= 2:
+                return
+    dfs(0)
+    if len(solutions) == 0:
+        return "No answer"
+    elif len(solutions) >= 2:
+        return "Not unique"
+    else:
+        return ' '.join(map(str, solutions[0]))
+
+
+def main():
+    data = sys.stdin.buffer.read().split()
+    if not data:
+        return
+    T = int(data[0])
+    out = []
+    p = 1
+    for case in range(1, T + 1):
+        init = [int(data[p + i]) for i in range(8)]
+        p += 8
+        res = solve_case(init)
+        
+        out.append(f"Case {case}: {res}")
+
+    sys.stdout.write('\n'.join(out) + '\n')
+
+if __name__ == "__main__":
+    main()
