@@ -451,24 +451,209 @@ print(amphibious_bfs())
 # 内存限制，只过7成(Python3),PyPy3可以全过
 
 # BFS: 土豪劫匪问题
-A, B, C = map(int, input().split())
-# V = A*B*C
-# A 个 BxC矩阵
-def gcd(a, b):
-    # 更相减损函数求最大公约数
-    while b:
-        a, b = b, a % b
-    return a
+import math
+from collections import deque
+# 获取最小公倍数
 def get_lcm(nums):
-    if not nums:
-        return 0
-        
     res = 1
     for num in nums:
-        # LCM(a,b) = a * b // GCD(a,b)
-        res = res * num // gcd(res, num)
+        res = res * num // math.gcd(res, num)
     return res
-Volum = [A, B, C]
+# BFS 寻路逻辑
+def castle_bfs(T, squares, A, B, C):
+    # 特判 1x1x1
+    if A == 1 and B == 1 and C == 1:
+        return 0 if squares[0][0][0] == 0 else -1
+    # 特判起点或终点是墙
+    if squares[0][0][0] == 1 or squares[A-1][B-1][C-1] == 1:
+        return -1
+    q = deque([(0, 0, 0, 0)])  # (x, y, z, 步数)
+    visited = {(0, 0, 0)}
+    dirs = ((-1,0,0), (1,0,0), (0,-1,0), (0,1,0), (0,0,-1), (0,0,1))
+    while q:
+        x, y, z, d = q.popleft()
+        # 剪枝：当前步数已达 T，再走一步必超时
+        if d >= T:
+            continue
+        for dx, dy, dz in dirs:
+            nx, ny, nz = x + dx, y + dy, z + dz
+            # 1. 边界检查
+            if not (0 <= nx < A and 0 <= ny < B and 0 <= nz < C):
+                continue
+            # 2. 墙壁检查（先查墙，再查终点，避免终点是墙）
+            if squares[nx][ny][nz] == 1:
+                continue
+            # 3. 访问检查
+            if (nx, ny, nz) in visited:
+                continue
+            # 4. 到达终点
+            if nx == A-1 and ny == B-1 and nz == C-1:
+                return d + 1
+            q.append((nx, ny, nz, d + 1))
+            visited.add((nx, ny, nz))
+    return -1
+def solve():
+    while True:
+        try:
+            # 读取维度 A B C，跳过空行
+            line = input()
+            while line.strip() == "":
+                line = input()
+            A, B, C = map(int, line.split())
+            # 读取地图（A 个 B 行 C 列）
+            squares = []
+            for _ in range(A):
+                layer = []
+                for _ in range(B):
+                    row = list(map(int, input().split()))
+                    layer.append(row)
+                squares.append(layer)
+            T = get_lcm([A, B, C])
+            print(castle_bfs(T, squares, A, B, C))
+        except EOFError:
+            # 读取到文件末尾时退出循环
+            break
+
+# BFS: 逃离混境之地
+import sys
+from collections import deque
+data = sys.stdin.read().split()
+n = int(data[0])
+m = int(data[1])
+# 将坐标转换为 0 索引
+sx = int(data[2]) - 1
+sy = int(data[3]) - 1
+ex = int(data[4]) - 1
+ey = int(data[5]) - 1
+start = (sx, sy)
+exit = (ex, ey)
+square = []
+idx = 6
+for _ in range(n):
+    line = data[idx:idx+m]
+    square.append(line)
+    idx += m
+# . 通路 # 墙 k 钥匙
+def chaos_bfs(start, exit, square):
+    sx, sy = start
+    ex, ey = exit
+    # 如果起点就是终点
+    if sx == ex and sy == ey:
+        return 0 if square[sx][sy] == 'k' else -1
+    q = deque()
+    # 判断起点是不是钥匙
+    start_key = 1 if square[sx][sy] == 'k' else 0
+    q.append((sx, sy, 0, start_key))
+    visited = {(sx, sy, start_key)}
+    dirs = ((-1,0), (1,0), (0,-1), (0,1))
+    while q:
+        x, y, t, have_key = q.popleft()
+        if x == ex and y == ey and have_key == 1:
+            return t
+        for dx, dy in dirs:
+            nx, ny = x+dx, y+dy
+            if not (0 <= nx < n and 0 <= ny < m):
+                continue
+            if square[nx][ny] == '#':
+                continue
+            nxt_key = have_key
+            if square[nx][ny] == 'k':
+                nxt_key = 1
+            # 终点单独处理
+            if nx == ex and ny == ey and nxt_key == 0:
+                continue
+            if (nx, ny, nxt_key) in visited:
+                continue
+            q.append((nx, ny, t+1, nxt_key))
+            visited.add((nx, ny, nxt_key))
+    return -1
+        
+print(chaos_bfs(start, exit, square))
+
+# 满分版本: 从钥匙出发双向BFS
+n, m = map(int, input().split())
+A, B, C, D = map(int, input().split())
+# 变索引
+A, B, C, D = A-1, B-1, C-1, D-1
+
+mp = []
+for i in range(n):
+    # 字符地图
+    mp.append(list(input()))
+
+inf = 10**9
+# 大数字预设
+dir = [(0, 1), (0, -1), (-1, 0), (1, 0)]
+dis1 = [[inf]*m for _ in range(n)]
+dis2 = [[inf]*m for _ in range(n)]
+
+def bfs(x, y, dis):
+    q = deque()
+    q.append([x, y]) # 将起点加入队列
+    dis[x][y] = 0 # 记录层数(距离)
+    while q:
+        x, y = q.popleft() 
+        for dx, dy in dirs:
+            nx, ny = x+dx, y+dy
+            if 0 <= nx < n and 0 <= ny < m and mp[nx][ny] != '#':
+                if dis[nx][ny] > dis[x][y] + 1:
+                    dis[nx][ny] = dis[x][y] + 1
+                    q.append([nx, ny]) # 加入队列中，以便遍历
+
+bfs(A, B, dis1)
+bfs(C, D, dis2)
+res = inf
+for i in range(n):
+    for j in range(m):
+        if mp[i][j] == 'k':
+            res = min(res, dis1[i][j] + dis2[i][j]) 
+            # 一定要走有钥匙的点，取这当中的最小值
+            # dis1[i][j] 和 dis2[i][j]已经预处理过了
+if res == inf:
+    print(-1)
+else:
+    print(res)
+# ===================分界线==================================
+import sys
+input = sys.stdin.read
+def lcm(a, b):
+    return abs(a * b) // math.gcd(a, b)
+def lcm_of_three(a, b, c):
+    return lcm(lcm(a, b), c)
+
+def bfs(grid, pos, end, visited, size):
+    queue = deque([(pos, [pos])])
+    while queue:
+        (x, y, z), path = queue.popleft()
+        if (x, y, z) == end:
+            return path
+        for dx, dy, dz in dirs:
+            nx, ny, nz = x + dx, y + dy, z + dz
+            if 0 <= nx <= size[0] and 0 <= ny <= size[1] and 0 <= nz <= size[2] and (not visited[nx][ny][nz]) and (grid[nx][ny][nz] == 0):
+                new_path = path + [(nx, ny, nz)]
+                queue.append(((nx, ny, nz), new_path))
+                visited[nx][ny][nz] = 1
+data = input().strip().splitlines()
+ii = 0
+while ii < len(data):
+    a, b, c = map(int, data[ii].split())
+    mp = [[[0]*c for _ in range(b)] for __ in range(a)]
+    v = [[[0]*c for _ in range(b)] for __ in range(a)]
+    ii += 1
+    for i in range(a):
+        for j in range(b):
+            s = list(map(int, data[ii].split()))
+            ii += 1
+            mp[i][j] = s
+    path = bfs(mp, (0, 0, 0), (a-1, b-1, c-1), v, (a-1, b-1, c-1))
+    if path == None:
+        print('-1')
+    else:
+        if lcm_of_three(a, b, c) < len(path):
+            print('-1')
+        else:
+            print(len(path) -1)
+
 
 # 串门: BFS两次求树直径
 def main():
