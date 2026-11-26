@@ -1,5 +1,5 @@
-"基础排序算法"
-# 排序算法专题(重点!)
+"基础排序算法专题(重点!)"
+
 # 选择排序
 # 依次遍历全数组找出最小的元素放到第i个位置
 def selection_sort(nums):
@@ -14,7 +14,6 @@ def selection_sort(nums):
         # 元素交换
         nums[i], nums[m] = nums[m], nums[i]
     return nums
-# 通过(标答)
 
 # 冒泡排序
 # 从左向右"冒泡"到合适的位置，记录每轮是否发生交换
@@ -53,7 +52,6 @@ def insertion_sort(nums):
         # 这里j+1是因为nums[j]刚好比key大,跳出了while循环
         # 所以j+1指向需要插入的位置
     return nums
-# 通过(标答)
 
 # 快速排序
 # 分治与双指针:将数组分成左右,使所有左边元素小于右边
@@ -83,7 +81,7 @@ def qsort(nums):
         qsort(L, j)
     if i < R:
         qsort(i, R)    
-    return
+
 # 三段式递归速排,占空间大但简明易懂
 def quicksort(arr):  
     if len(arr) <= 1:  
@@ -93,7 +91,6 @@ def quicksort(arr):
     middle = [x for x in arr if x == pivot]  
     right = [x for x in arr if x > pivot]  
     return quicksort(left) + middle + quicksort(right)  
-# 标答通过
 
 # 归并排序
 def merge_sort(L, R):
